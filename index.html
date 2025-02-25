@@ -5,68 +5,44 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Detekcja dźwięku</title>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/sound@latest/dist/teachablemachine-sound.min.js"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            margin-top: 50px;
-        }
-        button {
-            padding: 10px 20px;
-            font-size: 18px;
-            margin-top: 20px;
-            cursor: pointer;
-        }
-    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/speech-commands"></script>
 </head>
 <body>
-
     <h1>Detekcja dźwięku</h1>
-    <p id="status">Kliknij Start, aby rozpocząć wykrywanie.</p>
+    <p id="status">Ładowanie modelu...</p>
     <button onclick="startListening()">Start</button>
-    
+
     <script>
-        let model;
-        const URL = "https://strzalasty.github.io/bubo/"; // Ścieżka do Twojego modelu
+        let tmSound;
+        async function loadModel() {
+            const URL = "./";
+            tmSound = await speechCommands.create("BROWSER_FFT", {
+                includeSpectrogram: true,
+                probabilityThreshold: 0.75,
+                invokeCallbackOnNoiseAndUnknown: true,
+                overlapFactor: 0.5,
+                modelUrl: URL + "model.json",
+                metadataUrl: URL + "metadata.json"
+            });
+            await tmSound.ensureModelLoaded();
+            document.getElementById("status").innerText = "Model załadowany. Naciśnij Start.";
+        }
 
         async function startListening() {
-            document.getElementById("status").innerText = "Ładowanie modelu...";
-            
-            try {
-                model = await tmSound.create(URL + "model.json");
-                document.getElementById("status").innerText = "Model załadowany! Nasłuchuję...";
-                model.listen(result => {
-                    let highestClass = getHighestProbability(result);
-                    if (highestClass) {
-                        document.getElementById("status").innerText = "Wykryto: " + highestClass;
-                        sendToAppInventor(highestClass);
-                    }
-                });
-            } catch (error) {
-                console.error("Błąd podczas ładowania modelu:", error);
-                document.getElementById("status").innerText = "Błąd ładowania modelu!";
+            if (!tmSound) {
+                console.error("Model nie został załadowany!");
+                return;
             }
+            tmSound.listen(result => {
+                const labels = tmSound.wordLabels();
+                const highestIndex = result.scores.indexOf(Math.max(...result.scores));
+                document.getElementById("status").innerText = `Wykryto: ${labels[highestIndex]}`;
+            }, {
+                probabilityThreshold: 0.75
+            });
         }
 
-        function getHighestProbability(result) {
-            let highestProbability = 0;
-            let bestClass = null;
-            for (let i = 0; i < result.scores.length; i++) {
-                if (result.scores[i] > highestProbability) {
-                    highestProbability = result.scores[i];
-                    bestClass = result.labels[i];
-                }
-            }
-            return highestProbability > 0.75 ? bestClass : null;
-        }
-
-        function sendToAppInventor(detectedClass) {
-            if (window.AppInventor) {
-                window.AppInventor.setWebViewString(detectedClass);
-            }
-        }
+        loadModel();
     </script>
-
 </body>
 </html>
