@@ -10,74 +10,56 @@
 <body>
     <h1>Detekcja dźwięku</h1>
     <p id="status">Ładowanie modelu...</p>
-    <button id="startBtn" onclick="startListening()">Start</button>
-    <button id="stopBtn" onclick="stopListening()" disabled>Stop</button>
-
-    <audio id="alarmSound" src="https://www.soundjay.com/button/beep-07.wav"></audio>
+    <button onclick="startListening()">Start</button>
+    <button onclick="stopListening()">Stop</button>
 
     <script>
-        let recognizer;
-        let isListening = false; // Flaga, czy mikrofon jest aktywny
+        let tmSound;
+        let isListening = false;
 
         async function loadModel() {
-            const URL = "https://strzalasty.github.io/bubo/"; // Ścieżka do modelu
-            recognizer = speechCommands.create(
-                "BROWSER_FFT",
-                undefined,
-                URL + "model.json",
-                URL + "metadata.json"
-            );
-            await recognizer.ensureModelLoaded();
+            const URL = "./";
+            tmSound = await speechCommands.create("BROWSER_FFT", {
+                includeSpectrogram: true,
+                probabilityThreshold: 0.90,  // Zwiększona wartość do 90%
+                invokeCallbackOnNoiseAndUnknown: true,
+                overlapFactor: 0.5,
+                modelUrl: URL + "model.json",
+                metadataUrl: URL + "metadata.json"
+            });
+            await tmSound.ensureModelLoaded();
             document.getElementById("status").innerText = "Model załadowany. Naciśnij Start.";
         }
 
         async function startListening() {
-            if (!recognizer) {
+            if (!tmSound) {
                 console.error("Model nie został załadowany!");
                 return;
             }
-            if (isListening) {
-                console.warn("Nasłuchiwanie już trwa!");
-                return;
-            }
-
+            if (isListening) return; // Zapobiega wielokrotnemu uruchomieniu
+            
             isListening = true;
-            document.getElementById("startBtn").disabled = true;
-            document.getElementById("stopBtn").disabled = false;
-
-            recognizer.listen(result => {
-                const labels = recognizer.wordLabels();
+            tmSound.listen(result => {
+                const labels = tmSound.wordLabels();
                 const highestIndex = result.scores.indexOf(Math.max(...result.scores));
                 const detectedLabel = labels[highestIndex];
 
-                document.getElementById("status").innerText = `Wykryto: ${detectedLabel}`;
-
-                if (detectedLabel === "Class 2") { // Jeśli wykryto "Class 2"
-                    playAlarm();
+                if (detectedLabel !== "Szum w tle") {
+                    document.getElementById("status").innerText = `Wykryto: ${detectedLabel}`;
+                    console.log("⏹️ Nasłuchiwanie zatrzymane, wykryto:", detectedLabel);
                     stopListening();
                 }
             }, {
-                probabilityThreshold: 0.75
+                probabilityThreshold: 0.90
             });
         }
 
         function stopListening() {
-            if (!isListening) {
-                console.warn("Nasłuchiwanie nie jest aktywne!");
-                return;
+            if (tmSound && isListening) {
+                tmSound.stopListening();
+                isListening = false;
+                document.getElementById("status").innerText = "Nasłuchiwanie zatrzymane. Naciśnij Start, aby wznowić.";
             }
-
-            recognizer.stopListening();
-            isListening = false;
-            document.getElementById("status").innerText = "Nasłuchiwanie zatrzymane. Naciśnij Start, aby wznowić.";
-            document.getElementById("startBtn").disabled = false;
-            document.getElementById("stopBtn").disabled = true;
-        }
-
-        function playAlarm() {
-            const alarm = document.getElementById("alarmSound");
-            alarm.play();
-            console.log("🚨 Alarm został uruchomiony!");
         }
 
         loadModel();
