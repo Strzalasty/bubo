@@ -10,73 +10,54 @@
 <body>
     <h1>Detekcja dźwięku</h1>
     <p id="status">Ładowanie modelu...</p>
-    <button id="startButton" disabled>Start</button>
+    <button onclick="startListening()">Start</button>
+    <button onclick="stopListening()">Stop</button>
 
     <script>
         let tmSound;
-        let isListening = false;
-
         async function loadModel() {
+            const baseURL = "https://strzalasty.github.io/bubo/"; // Adres plików modelu na GitHub Pages
             try {
-                const URL = "./";
-                tmSound = await speechCommands.create("BROWSER_FFT", undefined, URL + "model.json", URL + "metadata.json");
+                tmSound = await speechCommands.create("BROWSER_FFT", undefined, 
+                    baseURL + "model.json", 
+                    baseURL + "metadata.json"
+                );
                 await tmSound.ensureModelLoaded();
-
-                const labels = tmSound.wordLabels();
-                console.log("Załadowane etykiety:", labels);
-
                 document.getElementById("status").innerText = "Model załadowany. Naciśnij Start.";
-                document.getElementById("startButton").disabled = false;
             } catch (error) {
                 console.error("Błąd podczas ładowania modelu:", error);
                 document.getElementById("status").innerText = "Błąd ładowania modelu!";
             }
         }
 
-        function startListening() {
+        async function startListening() {
             if (!tmSound) {
                 console.error("Model nie został załadowany!");
                 return;
             }
-
-            if (isListening) {
-                console.warn("Nasłuchiwanie już trwa!");
-                return;
-            }
-
-            const labels = tmSound.wordLabels();
-            console.log("Dostępne etykiety:", labels);
-
+            document.getElementById("status").innerText = "Nasłuchiwanie...";
             tmSound.listen(result => {
+                const labels = tmSound.wordLabels();
                 const highestIndex = result.scores.indexOf(Math.max(...result.scores));
-                const detectedLabel = labels[highestIndex] || "Nieznane";
+                const detectedLabel = labels[highestIndex];
 
                 document.getElementById("status").innerText = `Wykryto: ${detectedLabel}`;
-                console.log(`Wykryto: ${detectedLabel}`);
 
-                // Jeśli wykryto dźwięk inny niż "Szum w tle", zatrzymaj nasłuchiwanie
                 if (detectedLabel !== "Szum w tle") {
+                    console.log("Zatrzymanie nasłuchiwania, wykryto:", detectedLabel);
                     stopListening();
                 }
             }, {
                 probabilityThreshold: 0.75
             });
-
-            isListening = true;
-            document.getElementById("startButton").disabled = true;
         }
 
         function stopListening() {
-            if (tmSound && isListening) {
-                console.log("Zatrzymano nasłuchiwanie...");
+            if (tmSound) {
                 tmSound.stopListening();
-                isListening = false;
-                document.getElementById("status").innerText = "Nasłuchiwanie zatrzymane. Naciśnij Start, aby ponowić.";
-                document.getElementById("startButton").disabled = false;
+                document.getElementById("status").innerText = "Nasłuchiwanie zatrzymane. Naciśnij Start, aby wznowić.";
             }
         }
-
-        document.getElementById("startButton").addEventListener("click", startListening);
 
         loadModel();
     </script>
