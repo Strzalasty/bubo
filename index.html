@@ -11,7 +11,6 @@
     <h1>Detekcja dźwięku</h1>
     <p id="status">Ładowanie modelu...</p>
     <button id="startButton" disabled>Start</button>
-    <button id="stopButton" disabled>Stop</button>
 
     <script>
         let tmSound;
@@ -23,7 +22,6 @@
                 tmSound = await speechCommands.create("BROWSER_FFT", undefined, URL + "model.json", URL + "metadata.json");
                 await tmSound.ensureModelLoaded();
 
-                // Pobranie etykiet
                 const labels = tmSound.wordLabels();
                 console.log("Załadowane etykiety:", labels);
 
@@ -54,13 +52,18 @@
                 const detectedLabel = labels[highestIndex] || "Nieznane";
 
                 document.getElementById("status").innerText = `Wykryto: ${detectedLabel}`;
+                console.log(`Wykryto: ${detectedLabel}`);
+
+                // Jeśli wykryto dźwięk inny niż "Szum w tle", zatrzymaj nasłuchiwanie
+                if (detectedLabel !== "Szum w tle") {
+                    stopListening();
+                }
             }, {
                 probabilityThreshold: 0.75
             });
 
             isListening = true;
             document.getElementById("startButton").disabled = true;
-            document.getElementById("stopButton").disabled = false;
         }
 
         function stopListening() {
@@ -68,14 +71,12 @@
                 console.log("Zatrzymano nasłuchiwanie...");
                 tmSound.stopListening();
                 isListening = false;
-                document.getElementById("status").innerText = "Nasłuchiwanie zatrzymane.";
+                document.getElementById("status").innerText = "Nasłuchiwanie zatrzymane. Naciśnij Start, aby ponowić.";
                 document.getElementById("startButton").disabled = false;
-                document.getElementById("stopButton").disabled = true;
             }
         }
 
         document.getElementById("startButton").addEventListener("click", startListening);
-        document.getElementById("stopButton").addEventListener("click", stopListening);
 
         loadModel();
     </script>
