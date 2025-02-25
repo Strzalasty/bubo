@@ -10,14 +10,17 @@
 <body>
     <h1>Detekcja dźwięku</h1>
     <p id="status">Ładowanie modelu...</p>
-    <button onclick="startListening()">Start</button>
-    <button onclick="stopListening()">Stop</button>
+    <button id="startBtn" onclick="startListening()">Start</button>
+    <button id="stopBtn" onclick="stopListening()" disabled>Stop</button>
+
+    <audio id="alarmSound" src="https://www.soundjay.com/button/beep-07.wav"></audio>
 
     <script>
         let recognizer;
+        let isListening = false; // Flaga, czy mikrofon jest aktywny
 
         async function loadModel() {
-            const URL = "https://strzalasty.github.io/bubo/"; // Poprawiona ścieżka do modelu
+            const URL = "https://strzalasty.github.io/bubo/"; // Ścieżka do modelu
             recognizer = speechCommands.create(
                 "BROWSER_FFT",
                 undefined,
@@ -33,6 +36,14 @@
                 console.error("Model nie został załadowany!");
                 return;
             }
+            if (isListening) {
+                console.warn("Nasłuchiwanie już trwa!");
+                return;
+            }
+
+            isListening = true;
+            document.getElementById("startBtn").disabled = true;
+            document.getElementById("stopBtn").disabled = false;
 
             recognizer.listen(result => {
                 const labels = recognizer.wordLabels();
@@ -42,7 +53,7 @@
                 document.getElementById("status").innerText = `Wykryto: ${detectedLabel}`;
 
                 if (detectedLabel !== "Szum w tle") {
-                    console.log(`Zatrzymanie nasłuchiwania, wykryto: ${detectedLabel}`);
+                    playAlarm();
                     stopListening();
                 }
             }, {
@@ -51,10 +62,22 @@
         }
 
         function stopListening() {
-            if (recognizer) {
-                recognizer.stopListening();
-                document.getElementById("status").innerText = "Nasłuchiwanie zatrzymane. Naciśnij Start, aby wznowić.";
+            if (!isListening) {
+                console.warn("Nasłuchiwanie nie jest aktywne!");
+                return;
             }
+
+            recognizer.stopListening();
+            isListening = false;
+            document.getElementById("status").innerText = "Nasłuchiwanie zatrzymane. Naciśnij Start, aby wznowić.";
+            document.getElementById("startBtn").disabled = false;
+            document.getElementById("stopBtn").disabled = true;
+        }
+
+        function playAlarm() {
+            const alarm = document.getElementById("alarmSound");
+            alarm.play();
+            console.log("🚨 Alarm został uruchomiony!");
         }
 
         loadModel();
