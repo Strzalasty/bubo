@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Detekcja dźwięku</title>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/sound"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/sound@latest/dist/teachablemachine-sound.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -27,21 +27,26 @@
     <button onclick="startListening()">Start</button>
     
     <script>
-        let model, recognizer;
-        const URL = "https://strzalasty.github.io/bubo/";  // Ścieżka do Twojego modelu
+        let model;
+        const URL = "https://strzalasty.github.io/bubo/"; // Ścieżka do Twojego modelu
 
         async function startListening() {
             document.getElementById("status").innerText = "Ładowanie modelu...";
-            model = await tmSound.load(URL + "model.json", URL + "metadata.json");
-
-            document.getElementById("status").innerText = "Model załadowany! Nasłuchuję...";
-            model.listen(result => {
-                let highestClass = getHighestProbability(result);
-                if (highestClass) {
-                    document.getElementById("status").innerText = "Wykryto: " + highestClass;
-                    sendToAppInventor(highestClass);
-                }
-            });
+            
+            try {
+                model = await tmSound.create(URL + "model.json");
+                document.getElementById("status").innerText = "Model załadowany! Nasłuchuję...";
+                model.listen(result => {
+                    let highestClass = getHighestProbability(result);
+                    if (highestClass) {
+                        document.getElementById("status").innerText = "Wykryto: " + highestClass;
+                        sendToAppInventor(highestClass);
+                    }
+                });
+            } catch (error) {
+                console.error("Błąd podczas ładowania modelu:", error);
+                document.getElementById("status").innerText = "Błąd ładowania modelu!";
+            }
         }
 
         function getHighestProbability(result) {
