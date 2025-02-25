@@ -11,52 +11,36 @@
     <h1>Detekcja dźwięku</h1>
     <p id="status">Ładowanie modelu...</p>
     <button onclick="startListening()">Start</button>
-    <button onclick="stopListening()">Stop</button>
 
     <script>
-        let tmSound;
+        let recognizer;
+
         async function loadModel() {
-            const baseURL = "https://strzalasty.github.io/bubo/"; // Adres plików modelu na GitHub Pages
-            try {
-                tmSound = await speechCommands.create("BROWSER_FFT", undefined, 
-                    baseURL + "model.json", 
-                    baseURL + "metadata.json"
-                );
-                await tmSound.ensureModelLoaded();
-                document.getElementById("status").innerText = "Model załadowany. Naciśnij Start.";
-            } catch (error) {
-                console.error("Błąd podczas ładowania modelu:", error);
-                document.getElementById("status").innerText = "Błąd ładowania modelu!";
-            }
+            const URL = "https://strzalasty.github.io/bubo/"; // 🔹 Poprawiona ścieżka
+            recognizer = speechCommands.create(
+                "BROWSER_FFT",
+                undefined,
+                URL + "model.json",
+                URL + "metadata.json"
+            );
+            await recognizer.ensureModelLoaded();
+
+            document.getElementById("status").innerText = "Model załadowany. Naciśnij Start.";
         }
 
         async function startListening() {
-            if (!tmSound) {
+            if (!recognizer) {
                 console.error("Model nie został załadowany!");
                 return;
             }
-            document.getElementById("status").innerText = "Nasłuchiwanie...";
-            tmSound.listen(result => {
-                const labels = tmSound.wordLabels();
+
+            recognizer.listen(result => {
+                const labels = recognizer.wordLabels();
                 const highestIndex = result.scores.indexOf(Math.max(...result.scores));
-                const detectedLabel = labels[highestIndex];
-
-                document.getElementById("status").innerText = `Wykryto: ${detectedLabel}`;
-
-                if (detectedLabel !== "Szum w tle") {
-                    console.log("Zatrzymanie nasłuchiwania, wykryto:", detectedLabel);
-                    stopListening();
-                }
+                document.getElementById("status").innerText = `Wykryto: ${labels[highestIndex]}`;
             }, {
                 probabilityThreshold: 0.75
             });
-        }
-
-        function stopListening() {
-            if (tmSound) {
-                tmSound.stopListening();
-                document.getElementById("status").innerText = "Nasłuchiwanie zatrzymane. Naciśnij Start, aby wznowić.";
-            }
         }
 
         loadModel();
