@@ -18,22 +18,28 @@
         let isListening = false;
 
         async function loadModel() {
-            const URL = "./";
-            tmSound = await speechCommands.create("BROWSER_FFT", {
-                includeSpectrogram: true,
-                probabilityThreshold: 0.75,
-                invokeCallbackOnNoiseAndUnknown: true,
-                overlapFactor: 0.5,
-                modelUrl: URL + "model.json",
-                metadataUrl: URL + "metadata.json"
-            });
+            try {
+                const URL = "./";
+                tmSound = await speechCommands.create("BROWSER_FFT", {
+                    includeSpectrogram: true,
+                    probabilityThreshold: 0.75,
+                    invokeCallbackOnNoiseAndUnknown: true,
+                    overlapFactor: 0.5,
+                    modelUrl: URL + "model.json",
+                    metadataUrl: URL + "metadata.json"
+                });
 
-            await tmSound.ensureModelLoaded();
-            document.getElementById("status").innerText = "Model załadowany. Naciśnij Start.";
+                await tmSound.ensureModelLoaded();
+                console.log("Załadowano model!");
+                document.getElementById("status").innerText = "Model załadowany. Naciśnij Start.";
+            } catch (error) {
+                console.error("Błąd podczas ładowania modelu:", error);
+                document.getElementById("status").innerText = "Błąd ładowania modelu!";
+            }
         }
 
         function startListening() {
-            if (!tmSound) {
+            if (!tmSound || !tmSound.wordLabels) {
                 console.error("Model nie został załadowany!");
                 return;
             }
@@ -43,11 +49,14 @@
                 return;
             }
 
-            console.log("Rozpoczęto nasłuchiwanie...");
+            const labels = tmSound.wordLabels();
+            console.log("Dostępne etykiety:", labels);
+
             tmSound.listen(result => {
-                const labels = tmSound.wordLabels();
                 const highestIndex = result.scores.indexOf(Math.max(...result.scores));
-                document.getElementById("status").innerText = `Wykryto: ${labels[highestIndex]}`;
+                const detectedLabel = labels[highestIndex] || "Nieznane";
+
+                document.getElementById("status").innerText = `Wykryto: ${detectedLabel}`;
             }, {
                 probabilityThreshold: 0.75
             });
