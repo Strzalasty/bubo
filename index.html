@@ -52,7 +52,7 @@
 
                 document.getElementById("status").innerText = `Wykryto: ${detectedLabel}`;
 
-                if (detectedLabel !== "Szum w tle") {
+                if (detectedLabel === "Class 2") { // Jeśli wykryto "Class 2"
                     playAlarm();
                     stopListening();
                 }
