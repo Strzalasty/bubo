@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/audio"></script>
+</head>
+<body>
+    <h1>Detekcja dźwięku</h1>
+    <button onclick="start()">Start</button>
+    
+    <script>
+        let model, mic;
+        async function start() {
+            const URL = "https://teachablemachine.withgoogle.com/models/yBietgsmD/";  // <-- Twój model!
+            model = await tmAudio.load(URL + "model.json", URL + "metadata.json");
+            mic = new tmAudio.Microphone();
+            await mic.setup();
+            await mic.play();
+
+            function loop() {
+                model.predict(mic).then(predictions => {
+                    console.log(predictions);
+                    window.AppInventor.setWebViewString(predictions[0].className); // Wysyłamy do App Inventor
+                });
+                requestAnimationFrame(loop);
+            }
+            loop();
+        }
+    </script>
+</body>
+</html>
