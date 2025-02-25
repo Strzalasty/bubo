@@ -13,28 +13,29 @@
     <button onclick="startListening()">Start</button>
 
     <script>
-        let tmSound;
+        let recognizer;
+
         async function loadModel() {
-            const URL = "./";
-            tmSound = await speechCommands.create("BROWSER_FFT", {
-                includeSpectrogram: true,
-                probabilityThreshold: 0.75,
-                invokeCallbackOnNoiseAndUnknown: true,
-                overlapFactor: 0.5,
-                modelUrl: URL + "model.json",
-                metadataUrl: URL + "metadata.json"
-            });
-            await tmSound.ensureModelLoaded();
+            const URL = "https://strzalasty.github.io/bubo/"; // 🔹 Poprawiona ścieżka
+            recognizer = speechCommands.create(
+                "BROWSER_FFT",
+                undefined,
+                URL + "model.json",
+                URL + "metadata.json"
+            );
+            await recognizer.ensureModelLoaded();
+
             document.getElementById("status").innerText = "Model załadowany. Naciśnij Start.";
         }
 
         async function startListening() {
-            if (!tmSound) {
+            if (!recognizer) {
                 console.error("Model nie został załadowany!");
                 return;
             }
-            tmSound.listen(result => {
-                const labels = tmSound.wordLabels();
+
+            recognizer.listen(result => {
+                const labels = recognizer.wordLabels();
                 const highestIndex = result.scores.indexOf(Math.max(...result.scores));
                 document.getElementById("status").innerText = `Wykryto: ${labels[highestIndex]}`;
             }, {
