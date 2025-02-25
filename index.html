@@ -11,12 +11,13 @@
     <h1>Detekcja dźwięku</h1>
     <p id="status">Ładowanie modelu...</p>
     <button onclick="startListening()">Start</button>
+    <button onclick="stopListening()">Stop</button>
 
     <script>
         let recognizer;
 
         async function loadModel() {
-            const URL = "https://strzalasty.github.io/bubo/"; // 🔹 Poprawiona ścieżka
+            const URL = "https://strzalasty.github.io/bubo/"; // Poprawiona ścieżka do modelu
             recognizer = speechCommands.create(
                 "BROWSER_FFT",
                 undefined,
@@ -24,7 +25,6 @@
                 URL + "metadata.json"
             );
             await recognizer.ensureModelLoaded();
-
             document.getElementById("status").innerText = "Model załadowany. Naciśnij Start.";
         }
 
@@ -37,10 +37,24 @@
             recognizer.listen(result => {
                 const labels = recognizer.wordLabels();
                 const highestIndex = result.scores.indexOf(Math.max(...result.scores));
-                document.getElementById("status").innerText = `Wykryto: ${labels[highestIndex]}`;
+                const detectedLabel = labels[highestIndex];
+
+                document.getElementById("status").innerText = `Wykryto: ${detectedLabel}`;
+
+                if (detectedLabel !== "Szum w tle") {
+                    console.log(`Zatrzymanie nasłuchiwania, wykryto: ${detectedLabel}`);
+                    stopListening();
+                }
             }, {
                 probabilityThreshold: 0.75
             });
+        }
+
+        function stopListening() {
+            if (recognizer) {
+                recognizer.stopListening();
+                document.getElementById("status").innerText = "Nasłuchiwanie zatrzymane. Naciśnij Start, aby wznowić.";
+            }
         }
 
         loadModel();
