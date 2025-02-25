@@ -13,34 +13,47 @@
     <button onclick="startListening()">Start</button>
 
     <script>
-        let recognizer;
+        let tmSound;
+        let isListening = false;
 
         async function loadModel() {
-            const URL = "https://strzalasty.github.io/bubo/"; // 🔹 Poprawiona ścieżka
-            recognizer = speechCommands.create(
-                "BROWSER_FFT",
-                undefined,
-                URL + "model.json",
-                URL + "metadata.json"
-            );
-            await recognizer.ensureModelLoaded();
+            const URL = "./";
+            tmSound = await speechCommands.create("BROWSER_FFT", {
+                includeSpectrogram: true,
+                probabilityThreshold: 0.75,
+                invokeCallbackOnNoiseAndUnknown: true,
+                overlapFactor: 0.5,
+                modelUrl: URL + "model.json",
+                metadataUrl: URL + "metadata.json"
+            });
 
+            await tmSound.ensureModelLoaded();
             document.getElementById("status").innerText = "Model załadowany. Naciśnij Start.";
         }
 
         async function startListening() {
-            if (!recognizer) {
+            if (!tmSound) {
                 console.error("Model nie został załadowany!");
                 return;
             }
 
-            recognizer.listen(result => {
-                const labels = recognizer.wordLabels();
-                const highestIndex = result.scores.indexOf(Math.max(...result.scores));
-                document.getElementById("status").innerText = `Wykryto: ${labels[highestIndex]}`;
-            }, {
-                probabilityThreshold: 0.75
-            });
+            if (isListening) {
+                console.log("Zatrzymano nasłuchiwanie...");
+                tmSound.stopListening();
+                isListening = false;
+                document.getElementById("status").innerText = "Nasłuchiwanie zatrzymane.";
+            } else {
+                console.log("Rozpoczęto nasłuchiwanie...");
+                tmSound.listen(result => {
+                    const labels = tmSound.wordLabels();
+                    const highestIndex = result.scores.indexOf(Math.max(...result.scores));
+                    document.getElementById("status").innerText = `Wykryto: ${labels[highestIndex]}`;
+                }, {
+                    probabilityThreshold: 0.75
+                });
+                isListening = true;
+                document.getElementById("status").innerText = "Nasłuchiwanie...";
+            }
         }
 
         loadModel();
