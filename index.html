@@ -10,7 +10,7 @@
 <body>
     <h1>Detekcja dźwięku</h1>
     <p id="status">Ładowanie modelu...</p>
-    <button id="startButton">Start</button>
+    <button id="startButton" disabled>Start</button>
     <button id="stopButton" disabled>Stop</button>
 
     <script>
@@ -20,18 +20,15 @@
         async function loadModel() {
             try {
                 const URL = "./";
-                tmSound = await speechCommands.create("BROWSER_FFT", {
-                    includeSpectrogram: true,
-                    probabilityThreshold: 0.75,
-                    invokeCallbackOnNoiseAndUnknown: true,
-                    overlapFactor: 0.5,
-                    modelUrl: URL + "model.json",
-                    metadataUrl: URL + "metadata.json"
-                });
-
+                tmSound = await speechCommands.create("BROWSER_FFT", undefined, URL + "model.json", URL + "metadata.json");
                 await tmSound.ensureModelLoaded();
-                console.log("Załadowano model!");
+
+                // Pobranie etykiet
+                const labels = tmSound.wordLabels();
+                console.log("Załadowane etykiety:", labels);
+
                 document.getElementById("status").innerText = "Model załadowany. Naciśnij Start.";
+                document.getElementById("startButton").disabled = false;
             } catch (error) {
                 console.error("Błąd podczas ładowania modelu:", error);
                 document.getElementById("status").innerText = "Błąd ładowania modelu!";
@@ -39,7 +36,7 @@
         }
 
         function startListening() {
-            if (!tmSound || !tmSound.wordLabels) {
+            if (!tmSound) {
                 console.error("Model nie został załadowany!");
                 return;
             }
