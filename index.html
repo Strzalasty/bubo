@@ -1,31 +1,67 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detekcja dźwięku</title>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/audio"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/sound"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 18px;
+            margin-top: 20px;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
+
     <h1>Detekcja dźwięku</h1>
-    <button onclick="start()">Start</button>
+    <p id="status">Kliknij Start, aby rozpocząć wykrywanie.</p>
+    <button onclick="startListening()">Start</button>
     
     <script>
-        let model, mic;
-        async function start() {
-            const URL = "https://teachablemachine.withgoogle.com/models/yBietgsmD/";  // <-- Twój model!
-            model = await tmAudio.load(URL + "model.json", URL + "metadata.json");
-            mic = new tmAudio.Microphone();
-            await mic.setup();
-            await mic.play();
+        let model, recognizer;
+        const URL = "https://strzalasty.github.io/bubo/";  // Ścieżka do Twojego modelu
 
-            function loop() {
-                model.predict(mic).then(predictions => {
-                    console.log(predictions);
-                    window.AppInventor.setWebViewString(predictions[0].className); // Wysyłamy do App Inventor
-                });
-                requestAnimationFrame(loop);
+        async function startListening() {
+            document.getElementById("status").innerText = "Ładowanie modelu...";
+            model = await tmSound.load(URL + "model.json", URL + "metadata.json");
+
+            document.getElementById("status").innerText = "Model załadowany! Nasłuchuję...";
+            model.listen(result => {
+                let highestClass = getHighestProbability(result);
+                if (highestClass) {
+                    document.getElementById("status").innerText = "Wykryto: " + highestClass;
+                    sendToAppInventor(highestClass);
+                }
+            });
+        }
+
+        function getHighestProbability(result) {
+            let highestProbability = 0;
+            let bestClass = null;
+            for (let i = 0; i < result.scores.length; i++) {
+                if (result.scores[i] > highestProbability) {
+                    highestProbability = result.scores[i];
+                    bestClass = result.labels[i];
+                }
             }
-            loop();
+            return highestProbability > 0.75 ? bestClass : null;
+        }
+
+        function sendToAppInventor(detectedClass) {
+            if (window.AppInventor) {
+                window.AppInventor.setWebViewString(detectedClass);
+            }
         }
     </script>
+
 </body>
 </html>
